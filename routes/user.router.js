@@ -4,6 +4,28 @@ const { User } = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const authVerify = require("./verifyToken")
 
+
+router.get("/", authVerify, async(req, res) => {
+  try{
+  const users = await User.find({})
+  res.json({success:true, users})
+  } catch(err){
+    console.log(err)
+  }
+})
+
+router.get("/suggestion/:id", authVerify, async(req,res) => {
+  try{
+    const users = await User.find({})
+    const suggestedUsers = users.filter(user => !user.followers.includes(req.params.id) && user._id != req.params.id
+)
+    res.json({success: true, suggestedUsers})
+    console.log(suggestedUsers);
+  } catch(err){
+    console.log(err)
+  }
+})
+
 //update user
 router.route("/:id")
 .post(authVerify, async(req, res) => {
@@ -51,12 +73,15 @@ router.route("/:id")
 .get(authVerify, async(req, res) => {
   try{
     const user = await User.findById(req.params.id);
+    console.log(user)
     const {password, updatedAt, createdAt, __v, ...others } = user._doc;
     res.status(200).json({success: true, others})
   } catch(err){
+    console.log(err)
     res.status(500).json(err)
   }
 })
+
 //follow a user
 router.route("/:id/follow")
 .post(authVerify, async (req, res) => {
@@ -88,7 +113,7 @@ router.route("/:id/unfollow")
       const user = await User.findById(req.params.id);
       const currentUser = await User.findById(req.body.userId);
       if(user.followers.includes(req.body.userId)){
-        await user.updateOne({ $pull: {followers: req.body.userId}});
+        await user.updateOne({ $pull: {followers:req.params.id }});
         await currentUser.updateOne({$pull: {following : req.params.id}});
         res.status(200).json("User has been unfollowed");
       } else{
@@ -101,6 +126,10 @@ router.route("/:id/unfollow")
   } else{
     res.status(403).json("You cannot unfollow yourself")
   }
+})
+
+router.get("/", (req, res) => {
+  
 })
 
 module.exports = router;

@@ -3,15 +3,26 @@ const router = express.Router();
 const Post = require("../models/posts.model");
 const { User } = require("../models/user.model");
 const authVerify = require("./verifyToken");
+const { cloudinary } = require("../utils/cloudinary")
+
 //create a post
 
 router.route("/")
 .post(authVerify, async (req,res) =>{
-  const newPost = new Post(req.body);
   try{
+    if(req.body.image){
+      const imageStr = req.body.image;
+      const uploadedResponse = await cloudinary.uploader.upload(imageStr, {
+        upload_preset: 'social_media'
+      })
+      console.log(uploadedResponse);
+    }
+    const newPost = new Post(req.body);
     const savedPost = await newPost.save();
+    console.log(savedPost)
     res.status(200).json({success:true, savedPost})
   } catch(err){
+    console.log(err)
     res.status(500).json(err)
   }
 })
@@ -59,12 +70,13 @@ router.get("/:id", authVerify, async (req,res) => {
     res.status(500).json(err)
   }
 })
+
 //get timeline posts
 
-router.get("/timeline/all", authVerify, async(req,res) => {
+router.get("/timeline/all/:userId", authVerify, async(req,res) => {
   let postArray = [];
   try{
-    const currentUser = await User.findById(req.body.userId);
+    const currentUser = await User.findById(req.params.userId);
     const userPosts = await Post.find({userId: currentUser._id})
     const friendsPosts = await Promise.all(
       currentUser.following.map(friendId => {
@@ -75,6 +87,16 @@ router.get("/timeline/all", authVerify, async(req,res) => {
   } catch(err){
     console.log(err)
     res.status(500).json(err)
+  }
+})
+
+router.get("/timeline/:userId", authVerify, async (req,res) => {
+  try{
+    const currentUser = await User.findById(req.params.userId);
+    const userPosts = await Post.find({userId: currentUser._id})
+    res.status(200).json(userPosts);
+  } catch(err){
+    console.log(err)
   }
 })
 
